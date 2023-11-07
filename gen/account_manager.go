@@ -70,14 +70,14 @@ func (a *AccountList) addEmail(email string) {
 	a.Emails = append(a.Emails, email)
 }
 
-func (s *Session) updateAccounts(email string) error {
+func (s *Session) UpdateAccounts() error {
 
-	s.UnregisteredAccs.removeEmail(email)
+	s.UnregisteredAccs.removeEmail(s.state.Email)
 	if err := s.UnregisteredAccs.saveEmails(s.UnregisteredPath); err != nil {
 		return err
 	}
 
-	s.RegisteredAccs.addEmail(email)
+	s.RegisteredAccs.addEmail(s.state.Email)
 	if err := s.RegisteredAccs.saveEmails(s.RegisteredPath); err != nil {
 		return err
 	}

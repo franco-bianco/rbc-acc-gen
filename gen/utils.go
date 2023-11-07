@@ -9,8 +9,7 @@ import (
 	"github.com/go-faker/faker/v4"
 )
 
-func (s *Session) randomProfile(email string) error {
-	s.state.Email = email
+func (s *Session) randomProfile() error {
 	parts := strings.Split(s.state.Email, "@")
 	if len(parts) != 2 {
 		return errors.New("invalid email")

@@ -4,9 +4,9 @@ import (
 	"fmt"
 )
 
-func (s *Session) CreateAccount(emailAddress string) error {
+func (s *Session) CreateAccount() error {
 
-	if err := s.randomProfile(emailAddress); err != nil {
+	if err := s.randomProfile(); err != nil {
 		return fmt.Errorf("error generating random profile: %s", err)
 	}
 
@@ -56,7 +56,7 @@ func (s *Session) CreateAccount(emailAddress string) error {
 		return fmt.Errorf("error completing registration: %s", err)
 	}
 
-	if err := s.updateAccounts(emailAddress); err != nil {
+	if err := s.UpdateAccounts(); err != nil {
 		return fmt.Errorf("error updating accounts: %s", err)
 	}
 

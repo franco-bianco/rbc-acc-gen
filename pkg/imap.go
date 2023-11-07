@@ -1,7 +1,6 @@
 package imap
 
 import (
-	"context"
 	"fmt"
 	"io"
 
@@ -38,19 +37,6 @@ func LoginClient(c *client.Client, emailAddress string, appPassword string) erro
 func LogoutClient(c *client.Client) error {
 
 	return c.Logout()
-}
-
-func KeepLoggedIn(c *client.Client, ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if err := c.Noop(); err != nil {
-				return
-			}
-		}
-	}
 }
 
 var section imap.BodySectionName

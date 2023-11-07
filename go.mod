@@ -7,6 +7,7 @@ require (
 	github.com/emersion/go-message v0.17.0
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/sync v0.1.0
 	gopkg.in/resty.v1 v1.12.0
 )
 

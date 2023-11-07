@@ -7,11 +7,13 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/emersion/go-imap/client"
 )
 
 const (
 	clientMetadata   = "{\"appCode\":\"RH90\",\"appOrg\":\"com.rbc.fg.intnet.bnk.public\",\"appVersion\":\"v1.2.3\",\"assetId\":\"YSMN943L\",\"channelIdentifier\":\"olb\",\"ipAddress\":\"10.40.50.60\",\"language\":\"en\",\"physicalLocationId\":\"00075\",\"legacyId\":\"223456789\",\"requestUniqueId\":\"D83A54AC-7DDD-44C3-AB00-9D31128224EC\",\"timeZoneOffset\":\"-5\",\"originatingComputerCentreCode\":\"GCC\"}"
-	securityMetadata = "{\"ipAddress\":\"\",\"locale\":\"en\",\"userAgent\":\"Mozilla\\/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit\\/537.36 (KHTML, like Gecko) Chrome\\/119.0.0.0 Safari\\/537.36\",\"screenHeight\":1080,\"screenWidth\":1920,\"timeZoneOffset\":\"+08:00\",\"everCookies\":\"0\",\"webRTCMedium\":\"0\",\"mouseAndKeystrokeDynamics\":\"0\",\"countingHostsBehindNAT\":\"0\",\"canvasFingerprinting\":\"90174243971120769417be50c871fcb5\"}"
+	securityMetadata = "{\"ipAddress\":\"\",\"locale\":\"en\",\"userAgent\":\"Mozilla\\/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit\\/537.36 (KHTML, like Gecko) Chrome\\/119.0.0.0 Safari\\/537.36\",\"screenHeight\":1080,\"screenWidth\":1920,\"timeZoneOffset\":\"+08:00\",\"everCookies\":\"0\",\"webRTCMedium\":\"0\",\"mouseAndKeystrokeDynamics\":\"0\",\"countingHostsBehindNAT\":\"0\",\"canvasFingerprinting\":\"c796223f9c313be6c6d2854d507a8983\"}"
 )
 
 func (s *Session) initSession() error {
@@ -552,39 +554,40 @@ func (s *Session) completeRegistration() error {
 }
 
 func (s *Session) getOTPCode(isPrimary bool) (string, error) {
-
 	s.Log.Info("awaiting OTP code...")
-
-	var email string
+	var targetEmail string
 	if isPrimary {
-		email = s.state.Email
+		targetEmail = s.state.Email
 	} else {
-		email = s.state.RecoveryEmail
+		targetEmail = s.state.RecoveryEmail
 	}
-
-	timeout := time.After(60 * time.Second)
-
+	timeout := time.After(15 * time.Minute)
 	for {
 		select {
 		case <-timeout:
 			return "", fmt.Errorf("timed out waiting for OTP code")
-		default:
-			emails, err := imap.GetMailRange(s.IMAPClient, 3)
-			if err != nil {
-				return "", err
-			}
-			for _, emailData := range emails {
-				if strings.EqualFold(emailData.ToAddress, email) && strings.EqualFold(emailData.SubjectData, "Avion Rewards Security Code") {
-					re := regexp.MustCompile(`security code is (\d{6})`)
-					matches := re.FindStringSubmatch(emailData.BodyStr)
-					if len(matches) != 2 {
-						return "", fmt.Errorf("failed to find OTP code")
-					}
+		case emailData := <-s.EmailCh:
+			if strings.EqualFold(emailData.ToAddress, targetEmail) && strings.Contains(emailData.SubjectData, "Security Code") {
+				re := regexp.MustCompile(`security code is (\d{6})`)
+				matches := re.FindStringSubmatch(emailData.BodyStr)
+				if len(matches) == 2 {
 					return matches[1], nil
 				}
 			}
-			time.Sleep(15 * time.Second)
 		}
 	}
+}
 
+// EmailReader reads emails from the IMAP server and sends them to the email channel
+func EmailReader(client *client.Client, emailCh chan<- imap.EmailData) {
+	ticker := time.NewTicker(1 * time.Minute)
+	for range ticker.C {
+		emails, err := imap.GetMailRange(client, 10)
+		if err != nil {
+			return
+		}
+		for _, emailData := range emails {
+			emailCh <- emailData
+		}
+	}
 }
