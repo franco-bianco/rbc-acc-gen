@@ -55,26 +55,37 @@ func NewSession(email, unregisteredPath, registeredPath string, proxyList []stri
 		TimestampFormat:  "02 Jan 06 15:04:05",
 	})
 
-	client := resty.New()
-	parts := strings.Split(randomProxy(proxyList), ":")
-	uri, _ := url.Parse(fmt.Sprintf("http://%s:%s@%s:%s", parts[2], parts[3], parts[0], parts[1]))
-	client.SetTransport(&http.Transport{
-		Proxy: http.ProxyURL(uri),
-	})
-	client.SetProxy(uri.String())
-
 	s := &Session{
-		Client:           client,
+		Client:           resty.New(),
 		Log:              log.WithField("email", email),
 		UnregisteredPath: unregisteredPath,
 		RegisteredPath:   registeredPath,
 		state:            &state{Email: email},
 	}
 
+	if err := s.setClientProxy(proxyList); err != nil {
+		return nil, err
+	}
+
 	return s, nil
 }
 
+// setClientProxy sets the proxy for the resty client
+func (s *Session) setClientProxy(proxyList []string) error {
+
+	proxy := proxyList[rand.Intn(len(proxyList))]
+	parts := strings.Split(proxy, ":")
+
+	uri, _ := url.Parse(fmt.Sprintf("http://%s:%s@%s:%s", parts[2], parts[3], parts[0], parts[1]))
+	s.Client.SetTransport(&http.Transport{
+		Proxy: http.ProxyURL(uri),
+	})
+	s.Client.SetProxy(uri.String())
+	return nil
+}
+
 func LoadProxies(filepath string) ([]string, error) {
+
 	file, err := os.Open(filepath)
 	if err != nil {
 		return nil, err
@@ -87,9 +98,9 @@ func LoadProxies(filepath string) ([]string, error) {
 		proxies = append(proxies, scanner.Text())
 	}
 
-	return proxies, scanner.Err()
-}
+	if len(proxies) == 0 {
+		return nil, fmt.Errorf("no proxies found in file")
+	}
 
-func randomProxy(proxies []string) string {
-	return proxies[rand.Intn(len(proxies))]
+	return proxies, scanner.Err()
 }

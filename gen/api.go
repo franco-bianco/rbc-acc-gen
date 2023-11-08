@@ -580,7 +580,7 @@ func (s *Session) getOTPCode(isPrimary bool) (string, error) {
 
 // EmailReader reads emails from the IMAP server and sends them to the email channel
 func EmailReader(client *client.Client, emailCh chan<- imap.EmailData) {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(15 * time.Second)
 	for range ticker.C {
 		emails, err := imap.GetMailRange(client, 10)
 		if err != nil {

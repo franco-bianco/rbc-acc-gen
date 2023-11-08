@@ -62,7 +62,6 @@ func GetMailRange(c *client.Client, numberOfMails uint32) ([]EmailData, error) {
 
 	messages := make(chan *imap.Message, numberOfMails)
 	done := make(chan error, 1)
-	defer close(done)
 
 	go func() {
 		done <- c.Fetch(seqset, []imap.FetchItem{section.FetchItem()}, messages)
@@ -85,6 +84,7 @@ func GetMailRange(c *client.Client, numberOfMails uint32) ([]EmailData, error) {
 	if err := <-done; err != nil {
 		return nil, fmt.Errorf("error fetching emails: %w", err)
 	}
+	close(done)
 
 	return emails, nil
 }
